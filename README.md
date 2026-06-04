@@ -1,92 +1,36 @@
-# IsaacRobotics Applications
+# Spot Arm Pick & Place in Isaac Sim (cobot_0605)
 
-[![License](https://img.shields.io/github/license/mschweig/IsaacRobotics)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/mschweig/IsaacRobotics)](https://github.com/mschweig/IsaacRobotics/stargazers)
-[![Issues](https://img.shields.io/github/issues/mschweig/IsaacRobotics)](https://github.com/mschweig/IsaacRobotics/issues)
-[![Last Commit](https://img.shields.io/github/last-commit/mschweig/IsaacRobotics)](https://github.com/mschweig/IsaacRobotics/commits/main)
+This project demonstrates a 19-DOF Spot quadruped robot with an attached robotic arm performing a pick-and-place sequence in NVIDIA Isaac Sim. 
 
-**Reinforcement Learning-Controlled Robotics Simulation for Spot and Spot Arm based on NVIDIA Isaac Sim and Isaac Lab**
+## Key Features
 
----
+1. **Dynamic Base Lock (Statue Mode)**
+   - The robot's mobile base and 12 leg joints can be completely frozen in space during arm operations to prevent unwanted body rotations or physics instability caused by reaction torques.
+   - Implemented using a runtime USD `FixedJoint` dynamically generated between the world and the exact body position, perfectly preventing "Physics Explosions".
 
-## Overview
+2. **Smooth Simulation Reset**
+   - Safely destroys runtime constraints and physics locks *before* executing the Isaac Sim `world.reset()` step.
+   - Fixes the common bug where resetting the simulation while an active FixedJoint is holding the robot causes the PhysX solver to crash or crumple the robot.
 
-This project provides example applications, pre-trained policies, and environment configurations for research and prototyping of autonomous quadruped and manipulator behaviors in complex environments such as warehouses.
+3. **Fake Grasp & Lerp Sequences**
+   - Uses linear interpolation (Lerp) to smoothly animate the 7-DOF arm.
+   - Includes a visual "fake grasp" mechanism that dynamically reparents objects to the End-Effector upon arrival and disables their physics until released.
 
-The system leverages the power of Isaac Sim physics simulation and bridges it with ROS 2 for real-time testing and robotic development workflows.
+## Controls
+Focus on the Isaac Sim viewport window to use the following hotkeys:
 
----
+- `*` (Numpad Multiply / Asterisk): **Toggle Base Lock** (Freezes the robot in mid-air/standing position).
+- `1`: Start Pick sequence for **Mask**
+- `2`: Start Pick sequence for **Extinguisher**
+- `3`: Start Place sequence for **Mask**
+- `4`: Start Place sequence for **Extinguisher**
 
-## Features
-
-* ✅ Isaac Sim simulation environments for Spot and Spot Arm
-* ✅ RL policy controllers for locomotion
-* ✅ Example applications including warehouse navigation
-* ✅ ROS 2 bridge support for interfacing with external systems
-* ✅ Modular and extensible structure for adding new robot models and policies
-
----
-
-## Requirements
-
-* NVIDIA Isaac Sim
-* ROS 2 Humble
-* rmw_zenoh
-* GPU: NVIDIA RTX 40xx or better
-
----
-
-## Installation
-
-1. Clone the repository:
+## How to Run
 
 ```bash
-git clone https://github.com/mschweig/IsaacRobotics.git
+./run_isaac.sh applications/stow_cubes.py
 ```
 
-2. Install Isaac Sim and required extensions (refer to Isaac Sim documentation).
-
-3. (Optional) Install ROS 2 Humble and enable `isaacsim.ros2.bridge` extension in Isaac Sim.
-
----
-
-## Usage
-
-### Run Spot Arm in Warehouse Scenario
-
-```bash
-cd /workspaces/IsaacSim
-./python.sh /workspaces/IsaacRobotics/applications/spot_warehouse.py
-```
-
-Control the robot via keyboard:
-
-| Key               | Command       |
-| ----------------- | ------------- |
-| UP / NUMPAD\_8    | Move forward  |
-| DOWN / NUMPAD\_2  | Move backward |
-| LEFT / NUMPAD\_4  | Strafe left   |
-| RIGHT / NUMPAD\_6 | Strafe right  |
-| N / NUMPAD\_7     | Rotate left   |
-| M / NUMPAD\_9     | Rotate right  |
-
-### RL Policy Testing
-
-The `applications/spot_policy.py` contains example implementations of PolicyControllers for Spot and Spot Arm.
-You can adapt these for your custom simulation experiments.
-
----
-
-## Media
-
-### Spot Arm Policy
-
-![Spot Arm Simulation](assets/example_simulation.gif)
-
----
-
-## License
-
-This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
-
-NVIDIA proprietary code (e.g., RL policies) remains under NVIDIA's licensing terms.
+## Technical Notes
+- **FixedJoint Anchoring**: The Base Lock explicitly grabs the local-to-world transform of `/World/Spot/body` using `UsdGeom.Xformable` instead of the articulation root to prevent snapping.
+- **Physics Callback Ordering**: The reset logic intercepts the simulation loop *before* `world.step()` to safely clean up constraints without violating PhysX solver limits.
